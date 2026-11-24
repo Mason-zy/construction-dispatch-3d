@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>方块工地 · 建造进行时</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f5f3eb;
+        --muted: #aaa99f;
+        --line: #ffffff22;
+        --panel: #171c21;
+        --lime: #d2f36b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #11161a;
+        color: var(--ink);
+        font:
+          15px/1.5 system-ui,
+          "Microsoft YaHei",
+          sans-serif;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .app {
+        width: min(100%, 1060px);
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: clamp(23px, 4vw, 36px);
+        letter-spacing: -0.04em;
+        margin: 3px 0 0;
+      }
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .stage {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #bcd8d7;
+        box-shadow: 0 22px 70px #0006;
+      }
+      .stage:after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(
+          180deg,
+          #f9ffff0d,
+          transparent 45%,
+          #141a1f0d
+        );
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 960/540;
+      }
+      .controls {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px 18px;
+        margin-top: 12px;
+      }
+      .transport {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn {
+        border: 1px solid var(--line);
+        background: #252c31;
+        color: var(--ink);
+        border-radius: 9px;
+        padding: 9px 15px;
+        font: inherit;
+        cursor: pointer;
+      }
+      .btn:hover {
+        border-color: #ffffff66;
+      }
+      .btn.primary {
+        background: var(--lime);
+        color: #1b2114;
+        border-color: var(--lime);
+        font-weight: 700;
+      }
+      .time {
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        margin-left: auto;
+        font-size: 13px;
+      }
+      .scrub {
+        width: 100%;
+        margin: 14px 0 0;
+        accent-color: var(--lime);
+        cursor: ew-resize;
+      }
+      .ticks {
+        display: flex;
+        justify-content: space-between;
+        color: #81878a;
+        font-size: 11px;
+        margin-top: 3px;
+      }
+      @media (min-width: 601px) and (max-height: 740px) {
+        body {
+          padding: 12px;
+        }
+        .app {
+          max-width: calc((100dvh - 180px) * 16 / 9);
+        }
+        header {
+          margin-bottom: 10px;
+        }
+        .controls {
+          padding: 10px 14px;
+        }
+      }
+      @media (max-width: 600px) {
+        body {
+          padding: 14px;
+        }
+        .controls {
+          padding: 13px;
+        }
+        .transport {
+          gap: 7px;
+        }
+        .btn {
+          padding: 8px 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>方块工地</h1>
+        <div class="status" id="status">准备开工</div>
+      </header>
+      <section class="stage" aria-label="等轴方块工地动画">
+        <svg viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+          <title id="title">方块工地施工过程</title>
+          <desc id="desc">挖掘机清土、搅拌车浇筑底板、工人按层砌墙。</desc>
+          <defs>
+            <linearGradient id="sky" x2="0" y2="1">
+              <stop stop-color="#b9d9d8" />
+              <stop offset="1" stop-color="#e7e0ca" />
+            </linearGradient>
+            <pattern
+              id="grid"
+              width="36"
+              height="21"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M18 0 36 10.5 18 21 0 10.5Z"
+                fill="none"
+                stroke="#314246"
+                stroke-opacity=".10"
+              />
+            </pattern>
+            <filter id="shadow"><feGaussianBlur stdDeviation="9" /></filter>
+            <clipPath id="slabClip">
+              <rect id="slabReveal" x="695" y="268" width="0" height="184" />
+            </clipPath>
+            <g id="soilBlock">
+              <path d="M0 0 41 16 0 32-41 16Z" fill="#967a51" />
+              <path d="M-41 16 0 32v12l-41-16Z" fill="#796341" />
+              <path d="M0 32 41 16v12L0 44Z" fill="#665437" />
+            </g>
+            <g id="wallCourse" stroke="#8b5a42" stroke-width="2">
+              <path
+                d="m331 333 149 57 149-57-15-6-134 51-134-51Z"
+                fill="#d19a74"
+              />
+              <path d="m331 333 149 57v17l-149-57Z" fill="#b77956" />
+              <path d="m480 390 149-57v17l-149 57Z" fill="#985f46" />
+              <path
+                d="M368 347v17m38-3v17m37-3v17m74-16v17m38-31v17m37-31v17"
+                fill="none"
+              />
+            </g>
+          </defs>
+          <rect width="960" height="540" fill="url(#sky)" />
+          <circle cx="790" cy="100" r="47" fill="#fff3c7" opacity=".6" />
+          <path d="M0 283 480 164l480 119v257H0Z" fill="#b6a984" />
+          <path d="M0 283 480 402l480-119v257H0Z" fill="#9c906e" />
+          <path
+            d="M0 283 480 402l480-119"
+            fill="none"
+            stroke="#736c57"
+            stroke-opacity=".3"
+            stroke-width="2"
+          />
+          <path d="M0 283 480 402l480-119v257H0Z" fill="url(#grid)" />
+          <ellipse
+            cx="480"
+            cy="419"
+            rx="223"
+            ry="48"
+            fill="#29302b"
+            opacity=".18"
+            filter="url(#shadow)"
+          />
+          <g>
+            <path d="m296 347 82-32 82 32-82 33Z" fill="#66563f" />
+            <path d="m310 352 68-26 68 26-68 27Z" fill="#79694d" />
+            <use href="#soilBlock" x="378" y="315" data-remove-at="6" />
+            <use href="#soilBlock" x="419" y="331" data-remove-at="8" />
+            <use href="#soilBlock" x="337" y="331" data-remove-at="2" />
+            <use href="#soilBlock" x="378" y="347" data-remove-at="4" />
+          </g>
+          <g clip-path="url(#slabClip)">
+            <path d="m267 350 213-82 213 82-213 84Z" fill="#d2d1c5" />
+            <path d="m267 350 213 84v16l-213-84Z" fill="#aaa99e" />
+            <path d="m480 434 213-84v16l-213 84Z" fill="#85877f" />
+            <path d="m303 351 177-68 177 68-177 70Z" fill="#dad9ce" />
+          </g>
+          <g>
+            <use href="#wallCourse" y="0" data-build-at="20" />
+            <use href="#wallCourse" y="-17" data-build-at="23" />
+            <use href="#wallCourse" y="-34" data-build-at="26" />
+            <use href="#wallCourse" y="-51" data-build-at="29" />
+          </g>
+          <!-- 挖掘机 -->
+          <g id="excavator">
+            <ellipse
+              cx="245"
+              cy="376"
+              rx="92"
+              ry="14"
+              fill="#27302d"
+              opacity=".2"
+            />
+            <path
+              d="M165 366q6-21 24-22h100q22 3 28 22l-12 13H174Z"
+              fill="#343c3b"
+            />
+            <path d="M175 363h121l7 10H170Z" fill="#202726" />
+            <path d="M182 347h82l18 17h-98Z" fill="#d9a930" />
+            <path
+              d="m202 343 12-37q3-8 12-8h27q10 1 13 10l9 39Z"
+              fill="#e8b934"
+              stroke="#a77724"
+              stroke-width="3"
+            />
+            <path
+              d="m219 306 8-1-9 31h-10Zm21 0h19l7 30h-34Z"
+              fill="#b8d4ce"
+              stroke="#758c82"
+              stroke-width="2"
+            />
+            <g id="excavatorArm">
+              <path
+                d="m271 350 18-32 41 9-31 8-17 24"
+                fill="none"
+                stroke="#d6a72e"
+                stroke-width="12"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="m326 326 34 8-13 24-20-7 10-12-20-3Z"
+                fill="#414542"
+                stroke="#272b29"
+                stroke-width="3"
+              />
+            </g>
+            <circle cx="190" cy="369" r="9" fill="#bb9635" />
+            <circle cx="279" cy="369" r="9" fill="#bb9635" />
+          </g>
+          <!-- 搅拌车 -->
+          <g id="mixer" opacity="0">
+            <g id="mixerChute" opacity="0">
+              <path d="m660 362-44 26-7-9 45-25Z" fill="#8e9691" />
+              <path
+                id="concreteStream"
+                d="m613 384-15 10"
+                fill="none"
+                stroke="#e7e6dc"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-dasharray="4 3"
+              />
+            </g>
+            <ellipse
+              cx="688"
+              cy="383"
+              rx="95"
+              ry="13"
+              fill="#27302d"
+              opacity=".2"
+            />
+            <path d="m611 358 31-34h60l32 29v26H611Z" fill="#e5b733" />
+            <path
+              d="m648 327 10-17h35l14 18Z"
+              fill="#bfd3ca"
+              stroke="#859990"
+              stroke-width="2"
+            />
+            <path d="m705 326 38 22-9 11-44-19Z" fill="#d29f2e" />
+            <path
+              d="M626 337 683 316l23 47-58 22Z"
+              fill="#e7e6dc"
+              stroke="#888b83"
+              stroke-width="3"
+            />
+            <path
+              d="m637 343 45-17m-39 30 46-18m-38 32 45-18"
+              stroke="#b4b5ac"
+              stroke-width="5"
+            />
+            <circle cx="637" cy="377" r="13" fill="#303735" />
+            <circle cx="713" cy="377" r="13" fill="#303735" />
+            <circle cx="637" cy="377" r="5" fill="#b2b7ad" />
+            <circle cx="713" cy="377" r="5" fill="#b2b7ad" />
+            <path d="m655 379-6 17h90l-9-17Z" fill="#c9c9bd" />
+          </g>
+          <!-- 工人 -->
+          <g id="worker" opacity="0">
+            <circle cx="690" cy="283" r="9" fill="#d7a67b" />
+            <path d="m680 277 10-10 11 10Z" fill="#e6b52d" />
+            <path d="m682 294 18 0 8 30-26 0Z" fill="#55766b" />
+            <path
+              d="m685 322-5 21m16-21 9 19"
+              stroke="#454941"
+              stroke-width="6"
+              stroke-linecap="round"
+            />
+            <path
+              d="m681 300-14 15m29-14 12 8"
+              stroke="#d7a67b"
+              stroke-width="5"
+              stroke-linecap="round"
+            />
+          </g>
+          <g
+            opacity=".8"
+            font-family="system-ui,sans-serif"
+            font-size="12"
+            font-weight="700"
+            fill="#283638"
+          >
+            <text x="93" y="465">施工区 A</text>
+            <text x="735" y="466">材料堆场</text>
+          </g>
+        </svg>
+      </section>
+      <section class="controls">
+        <div class="transport">
+          <button class="btn primary" id="play" type="button">播放</button
+          ><button class="btn" id="reset" type="button">复位</button
+          ><span class="time"><b id="clock">00:00</b> / 00:30</span>
+        </div>
+        <input
+          class="scrub"
+          id="scrub"
+          type="range"
+          min="0"
+          max="30"
+          step="0.1"
+          value="0"
+          aria-label="拖动施工时间"
+        />
+        <div class="ticks">
+          <span>00:00 清土</span><span>00:08 浇筑底板</span
+          ><span>00:18 砌筑墙体</span><span>00:30 完工</span>
+        </div>
+      </section>
+    </main>
+    <script>
+      (() => {
+        const byId = (id) => document.getElementById(id);
+        const play = byId("play");
+        const reset = byId("reset");
+        const scrub = byId("scrub");
+        const clock = byId("clock");
+        const status = byId("status");
+        const excavatorArm = byId("excavatorArm");
+        const slabReveal = byId("slabReveal");
+        const mixer = byId("mixer");
+        const mixerChute = byId("mixerChute");
+        const stream = byId("concreteStream");
+        const worker = byId("worker");
+        const soilBlocks = document.querySelectorAll("[data-remove-at]");
+        const wallCourses = document.querySelectorAll("[data-build-at]");
+        let time = 0;
+        let running = false;
+        let lastFrame = 0;
+        let frameRequest = 0;
+
+        function ease(value) {
+          const progress = Math.max(0, Math.min(1, value));
+          return progress * progress * (3 - 2 * progress);
+        }
+
+        function setVisible(element, visible) {
+          element.setAttribute("opacity", visible ? "1" : "0");
+        }
+
+        function render(nextTime) {
+          time = Math.max(0, Math.min(30, nextTime));
+          scrub.value = time;
+          const tenths = Math.floor(time * 10 + 1e-8);
+          const seconds = String(Math.floor(tenths / 10)).padStart(2, "0");
+          clock.textContent = `00:${seconds}.${tenths % 10}`;
+
+          const digging = time < 8;
+          const armRotation = digging
+            ? Math.sin(((time % 2) / 2) * Math.PI) * 28
+            : 0;
+          excavatorArm.setAttribute(
+            "transform",
+            `rotate(${armRotation} 271 350)`,
+          );
+          soilBlocks.forEach((block) => {
+            setVisible(block, time < Number(block.dataset.removeAt));
+          });
+
+          const entering = ease((time - 8) / 2.5);
+          const leaving = ease((time - 16) / 2);
+          const pouring = time >= 10.5 && time < 16;
+          const exposedSlab = 430 * ease((time - 10.5) / 5.5);
+          mixer.setAttribute(
+            "transform",
+            `translate(${250 * (1 - entering + leaving)} 0)`,
+          );
+          setVisible(mixer, time >= 8 && time < 18);
+          setVisible(mixerChute, pouring);
+          stream.setAttribute("stroke-dashoffset", String(-time * 22));
+          slabReveal.setAttribute("x", String(695 - exposedSlab));
+          slabReveal.setAttribute("width", String(exposedSlab));
+
+          setVisible(worker, time >= 18);
+          wallCourses.forEach((course) => {
+            setVisible(course, time >= Number(course.dataset.buildAt));
+          });
+          status.textContent = digging
+            ? "挖掘基坑"
+            : time < 18
+              ? "浇筑底板"
+              : time < 30
+                ? "逐层砌墙"
+                : "施工完成";
+        }
+
+        function pausePlayback() {
+          running = false;
+          lastFrame = 0;
+          cancelAnimationFrame(frameRequest);
+          frameRequest = 0;
+          play.textContent = "播放";
+        }
+
+        function frame(now) {
+          if (!running) return;
+          if (!lastFrame) lastFrame = now;
+          const elapsed = Math.min((now - lastFrame) / 1000, 0.08);
+          lastFrame = now;
+          render(time + elapsed);
+          if (time === 30) pausePlayback();
+          else frameRequest = requestAnimationFrame(frame);
+        }
+
+        play.addEventListener("click", () => {
+          if (running) {
+            pausePlayback();
+            return;
+          }
+          if (time === 30) render(0);
+          running = true;
+          play.textContent = "暂停";
+          frameRequest = requestAnimationFrame(frame);
+        });
+        reset.addEventListener("click", () => {
+          pausePlayback();
+          render(0);
+        });
+        scrub.addEventListener("input", () => {
+          pausePlayback();
+          render(Number(scrub.value));
+        });
+        render(0);
+      })();
+    </script>
+  </body>
+</html>

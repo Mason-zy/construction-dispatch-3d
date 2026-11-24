@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f4f2ec">
+  <title>砼序 · 工地调度台</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./node_modules/three/build/three.module.js",
+        "three/addons/": "./node_modules/three/examples/jsm/",
+        "mediabunny": "./node_modules/mediabunny/dist/bundles/mediabunny.min.mjs"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="top-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><path d="m16 4 11 6-11 6L5 10l11-6Z" fill="#f2c785"/><path d="m5 12 11 6 11-6v4l-11 6-11-6v-4Z" fill="#dd935b"/><path d="m5 18 11 6 11-6v4l-11 6-11-6v-4Z" fill="#eab57a"/></svg>
+        </div>
+        <h1>砼序 <span>工地调度台</span></h1>
+      </div>
+      <div class="top-actions">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.7"/><path d="m15 15 4.1 4.1"/></svg>
+          <input id="search" type="search" role="combobox" aria-label="搜索设备或站点" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results" placeholder="搜索设备或站点" autocomplete="off">
+          <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+        </div>
+        <label class="site-select">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6Z"/><path d="M9 4v14m6-12v14"/></svg>
+          <select id="site-select" aria-label="选择站点"><option value="overview">园区全景</option></select>
+        </label>
+      </div>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="summary" aria-label="施工实时指标">
+      <div class="metric">
+        <span class="metric-mark amber" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m3.5 11.8 8.5-4.6 8.5 4.6-8.5 4.6-8.5-4.6Zm2 3.9 6.5 3.6 6.5-3.6"/></svg></span>
+        <div><p>土方清除</p><strong id="metric-soil">0</strong><span class="metric-unit"> / 12 块</span></div>
+      </div>
+      <div class="metric">
+        <span class="metric-mark teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.7c2.3 3.2 5.9 7.1 5.9 10.4a5.9 5.9 0 1 1-11.8 0c0-3.3 3.6-7.2 5.9-10.4Z"/><path d="M9 15a3 3 0 0 0 2.1 2.1"/></svg></span>
+        <div><p>混凝土浇筑</p><strong id="metric-concrete">0.0</strong><span class="metric-unit"> / 9 m³</span></div>
+      </div>
+      <div class="metric">
+        <span class="metric-mark terra" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v11H4zm0 5.5h16M9 7v5.5m6 0V18"/></svg></span>
+        <div><p>砖墙进度</p><strong id="metric-wall">0</strong><span class="metric-unit"> / 6 层</span></div>
+      </div>
+      <div class="metric">
+        <span class="metric-mark slate" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7h10v9H3zm10 3h4l4 4v2h-8"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
+        <div><p>运行设备</p><strong id="metric-fleet">1</strong><span class="metric-unit"> / <span id="metric-fleet-total">5</span> 台</span></div>
+      </div>
+    </section>
+    <div class="desk">
+      <div class="main-column">
+        <section class="scene" aria-labelledby="scene-title">
+          <canvas id="scene-canvas" aria-label="三维工地。可点击设备或站点，也可用设备列表选择。">需使用支持 WebGL 的浏览器。</canvas>
+          <div class="scene-head"><h2 id="scene-title">园区全景</h2><span id="scene-phase" class="scene-phase"><i></i><b>土方开挖</b></span></div>
+          <div id="scene-tag" class="scene-tag" aria-hidden="true" hidden><span></span></div>
+          <div class="scene-footer">
+            <span class="scene-hint" id="scene-hint">拖动旋转 · 滚轮缩放 · 右键平移</span>
+            <div class="camera-actions" role="group" aria-label="相机控制">
+              <button type="button" id="orbit" title="旋转模式" aria-label="旋转模式" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none"><path d="M18.7 8A7.5 7.5 0 0 0 6.6 6.7L4.4 9m0-5v5h5m-4.1 7a7.5 7.5 0 0 0 12.1 1.3l2.2-2.3m0 5v-5h-5"/></svg></button>
+              <button type="button" id="pan" title="平移模式" aria-label="平移模式" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3m12-6 3 3-3 3"/></svg></button>
+              <button type="button" id="zoom-in" title="放大视角" aria-label="放大视角"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-7-7v14"/></svg></button>
+              <button type="button" id="zoom-out" title="缩小视角" aria-label="缩小视角"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14"/></svg></button>
+              <button type="button" id="camera-reset" title="重置视角" aria-label="重置视角"><svg viewBox="0 0 24 24" fill="none"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/><circle cx="12" cy="12" r="3"/></svg></button>
+            </div>
+          </div>
+          <p id="scene-error" class="scene-error" role="alert" hidden></p>
+        </section>
+        <section class="process card" aria-labelledby="process-title">
+          <div class="process-head">
+            <div class="process-label"><h2 id="process-title">施工时间轴</h2><span id="process-state">土方开挖</span></div>
+            <div class="playback" role="group" aria-label="播放控制">
+              <button type="button" id="play" class="play-button"><span id="play-icon" class="play-icon" aria-hidden="true"></span><span id="play-text">播放</span></button>
+              <button type="button" id="reset" class="button compact" aria-label="重置时间" title="重置时间"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 2.4 5.7M4 6v6h6"/></svg></button>
+              <div class="clock"><output id="elapsed" for="seek" aria-live="off">00.0</output><span> / <span id="duration">60</span> 秒</span></div>
+            </div>
+          </div>
+          <div class="range-wrap">
+            <input id="seek" type="range" min="0" max="60" step="0.1" value="0" aria-label="施工时间" aria-valuetext="0.0 秒">
+            <div class="range-marks" aria-hidden="true"><i style="--offset:26.6667%"></i><i style="--offset:60%"></i></div>
+          </div>
+          <div class="steps" aria-label="施工阶段">
+            <button type="button" class="step" data-stage="0" aria-current="step"><i></i><b>土方开挖</b><span>0–16 秒</span></button>
+            <button type="button" class="step" data-stage="1"><i></i><b>装料与浇筑</b><span>16–36 秒</span></button>
+            <button type="button" class="step" data-stage="2"><i></i><b>砖墙砌筑</b><span>36–60 秒</span></button>
+          </div>
+        </section>
+      </div>
+      <aside class="sidebar" aria-label="设备与调度工具">
+        <section class="details card" aria-labelledby="detail-title">
+          <div class="side-caption"><span id="detail-type">运输设备</span><span id="detail-id" class="entity-id">MX-07</span></div>
+          <div class="detail-name"><h2 id="detail-title">混凝土搅拌车</h2><button type="button" id="focus" class="button focus" aria-label="在场景中定位" title="在场景中定位"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5.8"/><path d="M12 2.5V7m0 10v4.5M2.5 12H7m10 0h4.5"/></svg></button></div>
+          <div class="detail-meta"><span id="detail-status" class="status"><i></i>待装料</span><span id="detail-location">西区拌合站</span></div>
+          <div class="detail-value"><span id="detail-value-label">车载方量</span><span><strong id="detail-value">0.0</strong> <small id="detail-unit">/ 9 m³</small></span></div>
+          <progress id="detail-progress" value="0" max="1" aria-label="设备当前任务进度"></progress>
+        </section>
+        <section class="fleet card" aria-labelledby="fleet-title">
+          <div class="section-head"><h2 id="fleet-title">设备与站点</h2></div>
+          <div id="fleet-items" class="fleet-items"></div>
+        </section>
+        <section class="tools card" aria-label="碰撞检测和视频下载">
+          <div class="tools-actions">
+            <button type="button" id="scan" class="button"><svg viewBox="0 0 24 24" fill="none"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M8 12l2.5 2.5L16 9"/></svg>碰撞检测</button>
+            <button type="button" id="export" class="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v11m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>下载视频</button>
+          </div>
+          <div id="export-state" class="export-state" hidden>
+            <span id="export-note" role="status"></span>
+            <button type="button" id="export-cancel" class="text-button" hidden>取消</button>
+            <progress id="export-progress" max="1" value="0" aria-label="视频导出进度" hidden></progress>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <dialog id="scan-dialog" aria-labelledby="scan-title">
+    <div class="dialog-head"><h2 id="scan-title">碰撞检测</h2><form method="dialog"><button class="button close" aria-label="关闭碰撞检测" type="submit">×</button></form></div>
+    <p id="scan-summary"></p>
+    <div id="scan-results"></div>
+    <p class="scan-explanation">每 0.1 秒检查车辆、挖掘机主臂与铲斗、货叉、吊钩与吊载，以及已建模的固定设施。铲斗与作业土方接触计为正常作业。</p>
+  </dialog>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

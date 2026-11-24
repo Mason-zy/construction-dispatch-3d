@@ -1,0 +1,14 @@
+# 依赖
+node_modules/
+
+# 原始录屏（仅保留压缩后的演示视频 asset/demo-3d.mp4）
+asset/*.mp4
+!asset/demo-3d.mp4
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
